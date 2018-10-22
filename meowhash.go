@@ -1,9 +1,5 @@
 package meowhash
 
-import (
-	"encoding/binary"
-)
-
 type meowLane struct {
 	L0 [16]byte
 	L1 [16]byte
@@ -63,15 +59,15 @@ func meowHash1(seed uint64, src []byte) *meowLane {
 	length := uint64(len(src))
 
 	// set first 8 bytes of each lane to seed
-	binary.PutUvarint(iv.L0[:], seed)
-	binary.PutUvarint(iv.L1[:], seed)
-	binary.PutUvarint(iv.L2[:], seed)
-	binary.PutUvarint(iv.L3[:], seed)
+	putUint64(iv.L0[:], seed)
+	putUint64(iv.L1[:], seed)
+	putUint64(iv.L2[:], seed)
+	putUint64(iv.L3[:], seed)
 	// set second 8 bytes of each lane to (seed + length + 1)
-	binary.PutUvarint(iv.L0[8:], seed+length+1)
-	binary.PutUvarint(iv.L1[8:], seed+length+1)
-	binary.PutUvarint(iv.L2[8:], seed+length+1)
-	binary.PutUvarint(iv.L3[8:], seed+length+1)
+	putUint64(iv.L0[8:], seed+length+1)
+	putUint64(iv.L1[8:], seed+length+1)
+	putUint64(iv.L2[8:], seed+length+1)
+	putUint64(iv.L3[8:], seed+length+1)
 
 	// initialize all 16 streams with the initialization vector
 	S0123 := iv
@@ -117,6 +113,7 @@ func meowHash1(seed uint64, src []byte) *meowLane {
 				idx++
 				length--
 			}
+			partialIdx = 0
 			for length > 0 && partialIdx < 16 {
 				partial[i].L3[partialIdx] = src[idx]
 				partialIdx++
@@ -163,6 +160,15 @@ func meowHash1(seed uint64, src []byte) *meowLane {
 	aesMerge(&r0, &iv)
 
 	return &r0
+}
+
+func putUint64(buf []byte, x uint64) {
+	i := 0
+	for ; x >= 0xFF; i++ {
+		buf[i] = byte(x) & 0xFF
+		x >>= 8
+	}
+	buf[i] = byte(x)
 }
 
 func aesLoad(s *meowLane, from []byte) {
